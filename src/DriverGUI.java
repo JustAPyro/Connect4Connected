@@ -6,7 +6,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
@@ -14,15 +13,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
-import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 
-
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.util.Objects;
-import java.util.Optional;
+
 
 public class DriverGUI extends Application
 {
@@ -32,7 +26,7 @@ public class DriverGUI extends Application
     final static boolean CLIENT = false;
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage primaryStage) {
 
         // Create a box to hold all the menu icons
         VBox menuBox = new VBox();
@@ -64,21 +58,17 @@ public class DriverGUI extends Application
             ImageView logoView = new ImageView(image);
             menuBox.getChildren().add(logoView);
         } finally {
-
+            System.out.println("ERROR: COULDN'T LOAD IMAGES");
         }
 
 
         Button hostButton = new Button("Host Game");
-        hostButton.setOnAction(e -> {
-           gameLauncher(SERVER);
-        });
+        hostButton.setOnAction(e -> gameLauncher(SERVER) );
         hostButton.setPrefSize(400, 100);
         menuBox.getChildren().add(hostButton);
 
         Button joinButton = new Button("Join Game");
-        joinButton.setOnAction(e -> {
-            gameLauncher(CLIENT);
-        });
+        joinButton.setOnAction(e -> gameLauncher(CLIENT));
         joinButton.setPrefSize(400, 100);
         menuBox.getChildren().add(joinButton);
 
