@@ -84,7 +84,7 @@ public class DriverGUI extends Application
 
     }
 
-    private static void gameLauncher(boolean hostOption) {
+    private void gameLauncher(boolean hostOption) {
 
         // Create a new popup window
         Stage popup = new Stage();
@@ -162,7 +162,17 @@ public class DriverGUI extends Application
 
     }
 
-    private static void connect(Stage popup, String name, String info) {
+    private void connect(Stage popup, String name, String info) {
+        VBox box = new VBox();
+        popup.getScene().setRoot(box);
+
+        Connect4Server server = new Connect4Server(this, name, Integer.parseInt(info));
+        Thread serverThread = new Thread(server);
+        serverThread.start();
+    }
+
+    public void display(String str)
+    {
 
     }
 
@@ -180,7 +190,7 @@ public class DriverGUI extends Application
         // If this is a client
         if (hostOption == CLIENT) {
             if (!isInteger(info))
-                isValid = "Hosting information must be an integer.";
+                return "Hosting information must be an integer.";
 
             int infoInt = Integer.parseInt(info); // Convert to int now that we know it's safe
 

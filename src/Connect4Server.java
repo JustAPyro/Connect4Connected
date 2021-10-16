@@ -6,7 +6,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class Connect4Server
+public class Connect4Server implements Runnable
 {
     private ObjectInputStream streamFromClient;
     private ObjectOutputStream streamToClient;
@@ -14,6 +14,14 @@ public class Connect4Server
     private ServerSocket listener;
     private int port = 9875;
 
+    public static void out(String arg) {
+        System.out.println(arg);
+    }
+
+    public Connect4Server(DriverGUI parent, String name, int port) {
+
+        out("Server Initializing...");
+    }
     public Connect4Server(String name) throws IOException, ClassNotFoundException
     {
 
@@ -95,6 +103,12 @@ public class Connect4Server
         new Connect4Server("Luke");
     }
 
+    @Override
+    public void run() {
+        for (int i = 0; i < 10; i++) {
+            System.out.println("Running");
+        }
+    }
 }
 
 
