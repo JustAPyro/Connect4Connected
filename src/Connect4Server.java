@@ -8,19 +8,29 @@ import java.util.Scanner;
 
 public class Connect4Server implements Runnable
 {
+    private DriverGUI parent;
     private ObjectInputStream streamFromClient;
     private ObjectOutputStream streamToClient;
     private Socket connectionSocket;
     private ServerSocket listener;
     private int port = 9875;
 
-    public static void out(String arg) {
+    public void out(String arg) {
         System.out.println(arg);
+        parent.display(arg);
     }
 
     public Connect4Server(DriverGUI parent, String name, int port) {
 
-        out("Server Initializing...");
+        this.parent = parent;
+        out("--- Server Initializing ---");
+
+        out("Saving port " + port + "...");
+        this.port = port;
+
+        out("Saving parent...");
+
+
     }
     public Connect4Server(String name) throws IOException, ClassNotFoundException
     {
@@ -105,8 +115,28 @@ public class Connect4Server implements Runnable
 
     @Override
     public void run() {
-        for (int i = 0; i < 10; i++) {
-            System.out.println("Running");
+        out("--- Thread launching ---");
+
+        out("Attempting to create server listener on port " + port + "...");
+        try {
+            listener = new ServerSocket(port);
+            out("Server listener successfully attached to port...");
+        }
+        catch (IOException e) {
+            out("Error creating server socket, Aborting server run.");
+            return;
+        }
+
+        try {
+            out("Waiting for a client to connect...\n");
+            connectionSocket = listener.accept(); // Blocking line
+            streamFromClient = new ObjectInputStream(connectionSocket.getInputStream());
+            streamToClient = new ObjectOutputStream(connectionSocket.getOutputStream());
+
+            out("Client found! Connecting from port: " + connectionSocket.getPort());
+        }
+        catch (IOException e) {
+            out("Client found but connection can't be established.");
         }
     }
 }

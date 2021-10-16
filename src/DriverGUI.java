@@ -21,7 +21,8 @@ import java.util.Objects;
 public class DriverGUI extends Application
 {
 
-
+    Label updateLabel;
+    Thread connectionThread;
     final static boolean SERVER = true;
     final static boolean CLIENT = false;
 
@@ -166,14 +167,22 @@ public class DriverGUI extends Application
         VBox box = new VBox();
         popup.getScene().setRoot(box);
 
+        updateLabel = new Label("Please Wait.");
+        box.getChildren().add(updateLabel);
+
         Connect4Server server = new Connect4Server(this, name, Integer.parseInt(info));
-        Thread serverThread = new Thread(server);
-        serverThread.start();
+        connectionThread = new Thread(server);
+        connectionThread.start();
     }
 
     public void display(String str)
     {
+        String newText = updateLabel.getText() + "\n" + str;
+        updateLabel.setText(newText);
+    }
 
+    public void closeThread() {
+        connectionThread.stop();
     }
 
     private static String checkValid(String name, String info, boolean hostOption) {
@@ -183,20 +192,6 @@ public class DriverGUI extends Application
             isValid = "Please Enter a name.";
         else if (info.isEmpty())
             isValid = "Please enter connection information.";
-
-
-
-
-        // If this is a client
-        if (hostOption == CLIENT) {
-            if (!isInteger(info))
-                return "Hosting information must be an integer.";
-
-            int infoInt = Integer.parseInt(info); // Convert to int now that we know it's safe
-
-            if (infoInt < 1023|| infoInt > 65535)
-                isValid = "Port must be in range 1023 = 65535";
-        }
 
 
         return isValid;

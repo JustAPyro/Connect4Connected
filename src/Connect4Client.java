@@ -8,16 +8,17 @@ import java.net.UnknownHostException;
 import java.util.Scanner;
 
 
-public class Connect4Client
+public class Connect4Client implements Runnable
 {
 
 
-    int port = 9875;
-    String ip = "98.118.61.212";
+    int port = 9876;
+    String ip = "localhost";
     Socket socket;
     ObjectOutputStream streamToServer;
     ObjectInputStream streamFromServer;
     Scanner sc;
+
 
 
     public Connect4Client(String name) throws IOException, ClassNotFoundException
@@ -50,11 +51,6 @@ public class Connect4Client
             System.out.println(gameState);
         }
 
-
-
-
-
-
     }
 
     public static void main(String[] args) {
@@ -66,4 +62,8 @@ public class Connect4Client
         }
     }
 
+    @Override
+    public void run() {
+
+    }
 }
