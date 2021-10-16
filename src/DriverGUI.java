@@ -3,6 +3,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Background;
@@ -14,10 +15,12 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.Optional;
 
 public class DriverGUI extends Application
 {
@@ -61,6 +64,15 @@ public class DriverGUI extends Application
 
 
         Button hostButton = new Button("Host Game");
+        hostButton.setOnAction(e -> {
+           TextInputDialog pickPortDialog = new TextInputDialog();
+           pickPortDialog.setTitle("Pick a Port");
+           pickPortDialog.setContentText("Please enter a port that you would like to host this connect4 game on.");
+           pickPortDialog.initStyle(StageStyle.UTILITY);
+           Optional<String> result = pickPortDialog.showAndWait();
+
+           System.out.println("Launching server on port " + result);
+        });
         hostButton.setPrefSize(400, 100);
         menuBox.getChildren().add(hostButton);
 
