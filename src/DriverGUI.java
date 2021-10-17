@@ -25,7 +25,7 @@ public class DriverGUI extends Application
 {
 
     Label updateLabel;
-    Thread connectionThread;
+    SubThread connection;
     final static boolean SERVER = true;
     final static boolean CLIENT = false;
 
@@ -191,16 +191,22 @@ public class DriverGUI extends Application
         popup.sizeToScene();
 
         if (hostOption == SERVER) {
-            Connect4Server server = new Connect4Server(name, Integer.parseInt(info));
+            connection = new Connect4Server(Integer.parseInt(info));
+            Thread connectionThread = new Thread(connection);
+            connectionThread.start();
+        }
+
+        if (hostOption == CLIENT) {
+            System.out.println("Client not configured");
         }
 
         AnimationTimer waitLoop = new AnimationTimer() {
             @Override
             public void handle(long now) {
-
-
+                System.out.println(connection.isConnected());
             }
         };
+        waitLoop.start();
 
         /*
         Connect4Server server = new Connect4Server(this, name, Integer.parseInt(info));
@@ -216,9 +222,6 @@ public class DriverGUI extends Application
         updateLabel.setText(newText);
     }
 
-    public void closeThread() {
-        connectionThread.stop();
-    }
 
     private static String checkValid(String name, String info, boolean hostOption) {
 

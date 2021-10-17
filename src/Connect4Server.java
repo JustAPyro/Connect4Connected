@@ -6,29 +6,17 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class Connect4Server implements Runnable
-{
-    private DriverGUI parent;
-    private ObjectInputStream streamFromClient;
-    private ObjectOutputStream streamToClient;
+public class Connect4Server extends SubThread  {
     private Socket connectionSocket;
     private ServerSocket listener;
     private int port = 9875;
 
-    public void out(String arg) {
-        System.out.println(arg);
-        parent.display(arg);
-    }
 
-    public Connect4Server(DriverGUI parent, String name, int port) {
+    public Connect4Server(int port) {
 
-        this.parent = parent;
-        out("--- Server Initializing ---");
 
-        out("Saving port " + port + "...");
         this.port = port;
 
-        out("Saving parent...");
 
 
     }
@@ -49,24 +37,22 @@ public class Connect4Server implements Runnable
         try {
             System.out.println("Waiting for a client to connect...\n");
             connectionSocket = listener.accept();
-            streamFromClient = new ObjectInputStream(connectionSocket.getInputStream());
-            streamToClient = new ObjectOutputStream(connectionSocket.getOutputStream());
 
             System.out.println("Client found! Connecting from port: " + connectionSocket.getPort());
         }
         catch (IOException e) {
             System.out.println("Connection to client can't be established!");
         }
+/*
+        //String oppName = streamFromClient.readObject().toString();
+        //System.out.println("You're playing against: " + oppName);
+        //System.out.println("Sending them initialization data & waiting for the first move now...");
 
-        String oppName = streamFromClient.readObject().toString();
-        System.out.println("You're playing against: " + oppName);
-        System.out.println("Sending them initialization data & waiting for the first move now...");
-
-        Connect4 game = new Connect4(oppName, name);
+        //Connect4 game = new Connect4(oppName, name);
 
         String init = name + "\n" + game.toString();
 
-        streamToClient.writeObject(init);
+        //streamToClient.writeObject(init);
 
         boolean running = true;
         while(running) {
@@ -115,31 +101,16 @@ public class Connect4Server implements Runnable
 
     @Override
     public void run() {
-        out("--- Thread launching ---");
 
-        out("Attempting to create server listener on port " + port + "...");
+        // attempt to create server listener
         try {
             listener = new ServerSocket(port);
-            out("Server listener successfully attached to port...");
+            connectionSocket = listener.accept();
+            System.out.println("Setting connected");
+            setConnected(true);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        catch (IOException e) {
-            out("Error creating server socket, Aborting server run.");
-            return;
-        }
-
-        try {
-            out("Waiting for a client to connect...\n");
-            connectionSocket = listener.accept(); // Blocking line
-            streamFromClient = new ObjectInputStream(connectionSocket.getInputStream());
-            streamToClient = new ObjectOutputStream(connectionSocket.getOutputStream());
-
-            out("Client found! Connecting from port: " + connectionSocket.getPort());
-        }
-        catch (IOException e) {
-            out("Client found but connection can't be established.");
-        }
-
-        parent.closeThread();
 
     }
 
