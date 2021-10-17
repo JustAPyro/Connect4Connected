@@ -266,6 +266,8 @@ public class DriverGUI extends Application
             // Since we're a client we can't control game state, so we need to also read back the game object
             game = (Connect4) objectIn.readObject();
 
+            listener = new ObjectStreamListener(objectIn, true);
+
         }
         // If we're a server
         if (hostOption == SERVER) {
@@ -282,11 +284,14 @@ public class DriverGUI extends Application
             // Since we're a server we also need to send back the starting game object
             game = new Connect4(name, opponentName);
             objectOut.writeObject(game);
+            objectOut.reset();
+            objectOut.flush();
+
+            listener = new ObjectStreamListener(objectIn, false);
         }
 
 
         // Create a special listener object to watch for incoming data while we handle the GUI here
-        listener = new ObjectStreamListener(objectIn);
         Thread listenThread = new Thread(listener);
         listenThread.start(); // Start that on a different thread so our GUI doesn't get blocked and crash
 
@@ -314,6 +319,7 @@ public class DriverGUI extends Application
                 try {
                     game.insert(colPointer); // Make the play
                     objectOut.writeObject(game); // Send updated game state
+                    objectOut.reset();
                     objectOut.flush(); // Flush the object stream afterwards
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
@@ -323,6 +329,8 @@ public class DriverGUI extends Application
 
            if (game.p1Turn && hostOption == CLIENT) {
                try {
+                   System.out.println(game);
+                   System.out.println(game.p1Turn);
                    objectOut.writeInt(colPointer);
                    objectOut.flush();
                } catch (IOException ex) {
@@ -345,15 +353,35 @@ public class DriverGUI extends Application
                 game.draw(gc);
                 gc.fillRect((hSpace*(colPointer+1))-5, 10, 10, 20);
 
-            if (listener.ready()) {
-                int play = listener.get();
-                game.insert(play);
-                try {
-                    objectOut.writeObject(game);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                if (listener.ready()) {
+                    try {
+                        // If we're the server and we get information
+                        if (hostOption == SERVER) {
+
+                            // Get the play from the listener
+                            int play = listener.get();
+
+                            // Insert it into the game
+                            game.insert(play);
+
+                            // Write back the results to the client
+                            objectOut.writeObject(game);
+                            objectOut.reset();
+                            objectOut.flush();
+                        }
+                        // If we're the client and we get information
+                        if (hostOption == CLIENT) {
+                            game = (Connect4) listener.getObj();
+                        }
+
+
+
+
+                    } catch (Exception e) {
+
+                    }
+
                 }
-            }
 
             }
         }; gameLoop.start();

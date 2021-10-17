@@ -9,10 +9,14 @@ public class ObjectStreamListener implements Runnable{
     private final ObjectInputStream inputStream;
     private boolean inputStreamFlag;
     private boolean listening = true;
+
+    private boolean objectListener;
+    private Object objInput;
     private int input;
 
-    public ObjectStreamListener(ObjectInputStream inputStream) {
+    public ObjectStreamListener(ObjectInputStream inputStream, boolean objectListener) {
         this.inputStream = inputStream;
+        this.objectListener = objectListener;
     }
 
     @Override
@@ -21,8 +25,14 @@ public class ObjectStreamListener implements Runnable{
         {
             while(listening)
             {
-                input = inputStream.readInt();
-                inputStreamFlag = true;
+                if (!objectListener) {
+                    input = inputStream.readInt();
+                    inputStreamFlag = true;
+                }
+                if (objectListener) {
+                    objInput = inputStream.readObject();
+                    inputStreamFlag = true;
+                }
             }
         }
         catch (SocketTimeoutException exc)
@@ -37,6 +47,8 @@ public class ObjectStreamListener implements Runnable{
         {
             // some other I/O error: print it, log it, etc.
             exc.printStackTrace(); // for example
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
@@ -47,5 +59,10 @@ public class ObjectStreamListener implements Runnable{
     public int get() {
         inputStreamFlag = false;
         return input;
+    }
+
+    public Object getObj() {
+        inputStreamFlag = false;
+        return objInput;
     }
 }
