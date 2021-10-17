@@ -1,3 +1,12 @@
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
+
+
+
 public class Connect4
 {
 
@@ -6,6 +15,12 @@ public class Connect4
 
     // Create strings to save the players name in this game
     private String playerOne, playerTwo;
+
+    // Colors for each player
+    private Color colorOne, colorTwo, colorNone;
+
+    // Size for circles
+    double circleSize = 50;
 
     // Create a boolean to track who's turn it is (if true then player one's turn)
     boolean p1Turn;
@@ -22,6 +37,10 @@ public class Connect4
         // Set the players names
         this.playerOne = p1;
         this.playerTwo = p2;
+
+        colorOne = Color.YELLOW;
+        colorTwo = Color.RED;
+        colorNone = Color.LIGHTGRAY;
 
         // Initializing the board
         board = new int[boardx][boardy];
@@ -114,5 +133,38 @@ public class Connect4
         // Return the completed multiline string representing gamestate
         return boardString.toString();
     }
+
+    public void draw(GraphicsContext gc) {
+
+        Canvas c = gc.getCanvas();
+        double width = c.getWidth();
+        double height = c.getHeight();
+
+        double horizontalSpacing = width/(boardx+1);
+        double verticalSpacing = height/(boardy+1);
+
+        double                offset1 = .1;
+        double                offset2 = .9;
+        Color                 color1  = Color.rgb(0,0,255);
+        Color                 color2  = Color.rgb(0,200,255);
+        Stop[]                stops1  = new Stop[] {new Stop(offset1, color1), new Stop(offset2, color2)};
+        gc.setFill(new LinearGradient(0, 0, .2, 1.4, true, CycleMethod.NO_CYCLE, stops1));
+        gc.fillRect(0, 0, width, height);
+
+        for (int y = 1; y <= boardy; y++) {
+            for (int x = 1; x <= boardx; x++) {
+                drawCirc(gc, colorNone, x * horizontalSpacing, y * verticalSpacing);
+            }
+        }
+
+
+    }
+
+    public void drawCirc(GraphicsContext gc, Color color, double x, double y) {
+        gc.setFill(color);
+        gc.fillOval(x-(circleSize/2), y-(circleSize/2), circleSize, circleSize);
+    }
+
+
 
 }

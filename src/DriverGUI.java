@@ -4,6 +4,8 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -240,12 +242,24 @@ public class DriverGUI extends Application
         objectOut = new ObjectOutputStream(connection.getOutputStream());
 
 
+        // Read in the opponents screen name and write back ours to complete init
         String opponentName = objectIn.readObject().toString();
+        objectOut.writeObject(name);
+
         System.out.println(opponentName);
         Connect4 game = new Connect4(name, opponentName);
 
         VBox root = new VBox();
         primaryStage.getScene().setRoot(root);
+
+        Canvas canvas = new Canvas(650, 650);
+        root.getChildren().add(new Label(name + " versus " + opponentName));
+        root.getChildren().add(canvas);
+
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        gc.strokeRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        game.draw(gc);
+
     }
 
     private static String checkValid(String name, String info, boolean hostOption) {

@@ -35,7 +35,7 @@ public class Connect4Client implements Runnable
 
         streamFromServer = new ObjectInputStream(socket.getInputStream());
         String init = streamFromServer.readObject().toString();
-        System.out.print("You are playing against: " + init);
+        System.out.println("You are playing against: " + init);
 
         boolean running = true;
         while (running) {
