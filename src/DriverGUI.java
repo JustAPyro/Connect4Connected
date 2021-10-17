@@ -12,13 +12,11 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
-import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -34,9 +32,7 @@ public class DriverGUI extends Application
     Connect4 game;
 
     Stage primaryStage;
-    Stage popup;
 
-    Label updateLabel;
     SubThread connection;
     AnimationTimer waitLoop;
 
@@ -230,6 +226,7 @@ public class DriverGUI extends Application
             Thread connectionThread = new Thread(connection);
             connectionThread.start();
         }
+        System.out.println("Starting waitloop");
 
         waitLoop = new AnimationTimer() {
             @Override
@@ -250,45 +247,57 @@ public class DriverGUI extends Application
 
     }
 
+
+
     public void openGame(Socket connection, boolean hostOption, String name) throws IOException, ClassNotFoundException {
-
-        // Create object stream
-        objectIn = new ObjectInputStream(connection.getInputStream());
-        objectOut = new ObjectOutputStream(connection.getOutputStream());
-
 
         String opponentName = "";
         // If we're a client
         if (hostOption == CLIENT) {
-            // Be polite and send our name first to initialize, then read back opp name
+            // If we're a client we need to send the first message, so create the out, write our name, and flush
+            objectOut = new ObjectOutputStream(connection.getOutputStream());
             objectOut.writeObject(name);
             objectOut.flush();
+
+            // only THEN create the object in and read back (idk why it works this way, but any other way breaks)
+            objectIn = new ObjectInputStream(connection.getInputStream());
             opponentName = objectIn.readObject().toString();
+
+            // Since we're a client we can't control game state, so we need to also read back the game object
+            game = (Connect4) objectIn.readObject();
+
         }
         // If we're a server
         if (hostOption == SERVER) {
+
+            // If we're a server we can initialize our streams at the same time
+            objectIn = new ObjectInputStream(connection.getInputStream());
+            objectOut = new ObjectOutputStream(connection.getOutputStream());
+
             // Let's read in the other guys name, then send ours back
             opponentName = objectIn.readObject().toString();
             objectOut.writeObject(name);
             objectOut.flush();
+
+            // Since we're a server we also need to send back the starting game object
+            game = new Connect4(name, opponentName);
+            objectOut.writeObject(game);
         }
+
 
         // Create a special listener object to watch for incoming data while we handle the GUI here
         listener = new ObjectStreamListener(objectIn);
         Thread listenThread = new Thread(listener);
         listenThread.start(); // Start that on a different thread so our GUI doesn't get blocked and crash
 
-        // If we're a server we need to create the game object (Don't want a client tampering)
-        if (hostOption == SERVER)
-            game = new Connect4(name, opponentName);
-
         // Set up the UI
         VBox root = new VBox();
         primaryStage.getScene().setRoot(root);
 
-
         Canvas canvas = new Canvas(650, 650);
         double hSpace = canvas.getWidth()/(game.getBoardX()+1);
+
+        // Handle calculating which column the mouse is mousing over
         canvas.setOnMouseMoved(e -> {
             double x = e.getX();
            for (int i = 0; i < game.getBoardX(); i++) {
@@ -297,11 +306,24 @@ public class DriverGUI extends Application
                }
            }
         });
+
+        // On click, check if it's our turns (depending on if we're client or server, if so play the move
         canvas.setOnMouseClicked(e -> {
-           if (!game.p1Turn) {
-               game.insert(colPointer);
+
+            if (!game.p1Turn && hostOption == SERVER) {
+                try {
+                    game.insert(colPointer); // Make the play
+                    objectOut.writeObject(game); // Send updated game state
+                    objectOut.flush(); // Flush the object stream afterwards
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+
+
+           if (game.p1Turn && hostOption == CLIENT) {
                try {
-                   objectOut.writeObject(game);
+                   objectOut.writeInt(colPointer);
                    objectOut.flush();
                } catch (IOException ex) {
                    ex.printStackTrace();
