@@ -2,13 +2,14 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Scanner;
 
 
-public class Connect4Client implements Runnable
+public class Connect4Client extends SubThread
 {
 
 
@@ -18,10 +19,17 @@ public class Connect4Client implements Runnable
     ObjectOutputStream streamToServer;
     ObjectInputStream streamFromServer;
     Scanner sc;
+    String info;
 
 
+    public Connect4Client(String info)
+    {
 
-    public Connect4Client(String name) throws IOException, ClassNotFoundException
+        this.info = info;
+
+    }
+
+    public Connect4Client(String name, boolean nix) throws IOException, ClassNotFoundException
     {
 
         Scanner sc = new Scanner(System.in);
@@ -43,27 +51,56 @@ public class Connect4Client implements Runnable
             int play = sc.nextInt();
             streamToServer.writeInt(play);
             streamToServer.flush();
-            String gameState = streamFromServer.readObject().toString();
-            System.out.print(gameState);
+            Connect4 gameState = (Connect4) streamFromServer.readObject();
+            System.out.print(gameState.toString());
             System.out.println("Waiting for their move...");
 
-            gameState = streamFromServer.readObject().toString();
-            System.out.println(gameState);
+            gameState = (Connect4) streamFromServer.readObject();
+            System.out.println(gameState.toString());
         }
 
     }
 
     public static void main(String[] args) {
         System.out.println("Launching client from main...");
-        try {
-            new Connect4Client("Daniel");
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
+        new Connect4Client("Daniel");
     }
 
     @Override
     public void run() {
+
+        // Start by parsing (ie localhost:9876 -> ip:localhost, port:9867)
+        String[] connectionInfo = info.split(":");
+        ip = connectionInfo[0];
+        port = Integer.parseInt(connectionInfo[1]);
+
+        boolean scanning = true;
+        while (scanning) {
+            try {
+                socket = new Socket(ip, port);
+                setConnected(true);
+                setConnection(socket);
+                scanning = false;
+            } catch(Exception e) {
+                try {
+                    Thread.sleep(2000);
+                } catch(InterruptedException ie) {
+                    ie.printStackTrace();
+                }
+            }
+        }
+        /*
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("Connecting to port: " + port + "...");
+        socket = new Socket(ip, port);
+        System.out.println("Connection Successful! Getting initialization data...");
+        streamToServer = new ObjectOutputStream(socket.getOutputStream());
+        streamToServer.writeObject(name);
+        streamToServer.flush();
+
+         */
+
 
     }
 }

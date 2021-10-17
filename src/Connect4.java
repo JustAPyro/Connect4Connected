@@ -5,9 +5,10 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 
+import java.io.Serializable;
 
 
-public class Connect4
+public class Connect4 implements Serializable
 {
 
     // Width and height of the board (Standard is 6x7)
@@ -16,8 +17,7 @@ public class Connect4
     // Create strings to save the players name in this game
     private String playerOne, playerTwo;
 
-    // Colors for each player
-    private Color colorOne, colorTwo, colorNone;
+
 
     // Size for circles
     double circleSize = 50;
@@ -38,9 +38,7 @@ public class Connect4
         this.playerOne = p1;
         this.playerTwo = p2;
 
-        colorOne = Color.YELLOW;
-        colorTwo = Color.RED;
-        colorNone = Color.LIGHTGRAY;
+
 
         // Initializing the board
         board = new int[boardx][boardy];
@@ -134,7 +132,18 @@ public class Connect4
         return boardString.toString();
     }
 
+    public int getBoardX() {
+        return boardx;
+    }
+
     public void draw(GraphicsContext gc) {
+
+        // Colors for each player
+        Color colorOne, colorTwo, colorNone;
+
+        colorOne = Color.YELLOW;
+        colorTwo = Color.RED;
+        colorNone = Color.LIGHTGRAY;
 
         Canvas c = gc.getCanvas();
         double width = c.getWidth();
@@ -153,7 +162,12 @@ public class Connect4
 
         for (int y = 1; y <= boardy; y++) {
             for (int x = 1; x <= boardx; x++) {
-                drawCirc(gc, colorNone, x * horizontalSpacing, y * verticalSpacing);
+                if (board[x-1][y-1] == 0)
+                    drawCirc(gc, colorNone, x * horizontalSpacing, y * verticalSpacing);
+                if (board[x-1][y-1] == 1)
+                    drawCirc(gc, colorOne, x * horizontalSpacing, y * verticalSpacing);
+                if (board[x-1][y-1] == 2)
+                    drawCirc(gc, colorTwo, x * horizontalSpacing, y * verticalSpacing);
             }
         }
 

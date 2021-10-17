@@ -12,6 +12,7 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
@@ -30,6 +31,8 @@ import java.util.Objects;
 public class DriverGUI extends Application
 {
 
+    Connect4 game;
+
     Stage primaryStage;
     Stage popup;
 
@@ -37,11 +40,14 @@ public class DriverGUI extends Application
     SubThread connection;
     AnimationTimer waitLoop;
 
+    ObjectStreamListener listener;
     ObjectOutputStream objectOut;
     ObjectInputStream objectIn;
 
     final static boolean SERVER = true;
     final static boolean CLIENT = false;
+
+    int colPointer;
 
     @Override
     public void start(Stage primaryStage) {
@@ -195,8 +201,14 @@ public class DriverGUI extends Application
         box.setSpacing(15);
 
         // Add label
-        Label waitingLabel = new Label("Waiting for client to connect...");
+        Label waitingLabel = new Label();
         box.getChildren().add(waitingLabel);
+
+        // Adjust label based on hostOption
+        if (hostOption == SERVER)
+            waitingLabel.setText("Waiting for client to connect...");
+        if (hostOption == CLIENT)
+            waitingLabel.setText("Looking for server...");
 
         // Add indicator
         ProgressBar pb = new ProgressBar();
@@ -214,7 +226,9 @@ public class DriverGUI extends Application
         }
 
         if (hostOption == CLIENT) {
-            System.out.println("Client not configured");
+            connection = new Connect4Client(info);
+            Thread connectionThread = new Thread(connection);
+            connectionThread.start();
         }
 
         waitLoop = new AnimationTimer() {
@@ -225,7 +239,7 @@ public class DriverGUI extends Application
                     waitLoop.stop();
                     try {
                         System.out.println(connection.getConnection());
-                        openGame(connection.getConnection(), name);
+                        openGame(connection.getConnection(), hostOption, name);
                     } catch (IOException | ClassNotFoundException e) {
                         e.printStackTrace();
                     }
@@ -236,29 +250,93 @@ public class DriverGUI extends Application
 
     }
 
-    public void openGame(Socket connection, String name) throws IOException, ClassNotFoundException {
+    public void openGame(Socket connection, boolean hostOption, String name) throws IOException, ClassNotFoundException {
 
+        // Create object stream
         objectIn = new ObjectInputStream(connection.getInputStream());
         objectOut = new ObjectOutputStream(connection.getOutputStream());
 
 
-        // Read in the opponents screen name and write back ours to complete init
-        String opponentName = objectIn.readObject().toString();
-        objectOut.writeObject(name);
+        String opponentName = "";
+        // If we're a client
+        if (hostOption == CLIENT) {
+            // Be polite and send our name first to initialize, then read back opp name
+            objectOut.writeObject(name);
+            objectOut.flush();
+            opponentName = objectIn.readObject().toString();
+        }
+        // If we're a server
+        if (hostOption == SERVER) {
+            // Let's read in the other guys name, then send ours back
+            opponentName = objectIn.readObject().toString();
+            objectOut.writeObject(name);
+            objectOut.flush();
+        }
 
-        System.out.println(opponentName);
-        Connect4 game = new Connect4(name, opponentName);
+        // Create a special listener object to watch for incoming data while we handle the GUI here
+        listener = new ObjectStreamListener(objectIn);
+        Thread listenThread = new Thread(listener);
+        listenThread.start(); // Start that on a different thread so our GUI doesn't get blocked and crash
 
+        // If we're a server we need to create the game object (Don't want a client tampering)
+        if (hostOption == SERVER)
+            game = new Connect4(name, opponentName);
+
+        // Set up the UI
         VBox root = new VBox();
         primaryStage.getScene().setRoot(root);
 
+
         Canvas canvas = new Canvas(650, 650);
+        double hSpace = canvas.getWidth()/(game.getBoardX()+1);
+        canvas.setOnMouseMoved(e -> {
+            double x = e.getX();
+           for (int i = 0; i < game.getBoardX(); i++) {
+               if (i*hSpace < x && x < (i+1)*hSpace) {
+                   colPointer = i;
+               }
+           }
+        });
+        canvas.setOnMouseClicked(e -> {
+           if (!game.p1Turn) {
+               game.insert(colPointer);
+               try {
+                   objectOut.writeObject(game);
+                   objectOut.flush();
+               } catch (IOException ex) {
+                   ex.printStackTrace();
+               }
+
+           }
+        });
         root.getChildren().add(new Label(name + " versus " + opponentName));
         root.getChildren().add(canvas);
+        primaryStage.sizeToScene();
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
-        gc.strokeRect(0, 0, canvas.getWidth(), canvas.getHeight());
         game.draw(gc);
+
+        AnimationTimer gameLoop = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+
+                game.draw(gc);
+                gc.fillRect((hSpace*(colPointer+1))-5, 10, 10, 20);
+
+            if (listener.ready()) {
+                int play = listener.get();
+                game.insert(play);
+                try {
+                    objectOut.writeObject(game);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            }
+        }; gameLoop.start();
+
+
 
     }
 
