@@ -1,3 +1,4 @@
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -5,6 +6,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -13,6 +15,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
 import java.util.Objects;
@@ -42,7 +45,6 @@ public class DriverGUI extends Application
                 new Stop(1, Color.CORNFLOWERBLUE))
         );
 
-
         // Set menubox to transparent background
         menuBox.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)));
 
@@ -52,32 +54,25 @@ public class DriverGUI extends Application
         // Set for items to align in the cneter
         menuBox.setAlignment(Pos.CENTER);
 
+        // Load the header image
+        Image image = new Image("Images/Connect4.png");
+        ImageView logoView = new ImageView(image);
+        menuBox.getChildren().add(logoView);
 
-
-        try {
-            Image image = new Image("Images/Connect4.png");
-            ImageView logoView = new ImageView(image);
-            menuBox.getChildren().add(logoView);
-        } finally {
-            System.out.println("ERROR: COULDN'T LOAD IMAGES");
-        }
-
-
+        // Host game button
         Button hostButton = new Button("Host Game");
         hostButton.setOnAction(e -> gameLauncher(SERVER) );
         hostButton.setPrefSize(400, 100);
         menuBox.getChildren().add(hostButton);
 
+        // Join game button
         Button joinButton = new Button("Join Game");
         joinButton.setOnAction(e -> gameLauncher(CLIENT));
         joinButton.setPrefSize(400, 100);
         menuBox.getChildren().add(joinButton);
 
-
-
+        // Set stage to scene
         primaryStage.setScene(menuScene);
-
-
 
         // Set title and display
         primaryStage.setTitle("Connect4Connected");
@@ -85,6 +80,13 @@ public class DriverGUI extends Application
 
     }
 
+    /**
+     * Collects all the information required to launch the game.
+     * Opens a separate window to get info about port/IP/name
+     * Launches server thread and waits for connection
+     *
+     * @param hostOption DriverGUI.SERVER or DriverGUI.CLIENT represents if this will be a client or server
+     */
     private void gameLauncher(boolean hostOption) {
 
         // Create a new popup window
@@ -96,11 +98,12 @@ public class DriverGUI extends Application
         loginGrid.setHgap(5);
         loginGrid.setVgap(10);
 
-        // Add a label and textbox to get "username"
+        // Add a label and text box to get "username"
         Label nameLabel = new Label("Enter screen name: ");
         GridPane.setHalignment(nameLabel, HPos.RIGHT);
         loginGrid.add(nameLabel, 0, 0);
 
+        // Get the name
         TextField nameField = new TextField();
         loginGrid.add(nameField, 1, 0);
 
@@ -144,35 +147,67 @@ public class DriverGUI extends Application
 
             // If the string returned is "valid" then start connection
             if (Objects.equals(isValid, "valid"))
-                connect(popup, name, info);
+                connect(popup, hostOption, name, info);
             else {
+                // Otherwise, set the label to display the reson it failed and set color to red
                 checkLabel.setText(isValid); // Otherwise set the label to the reason it's not valid
                 checkLabel.setTextFill(Color.RED);
             }
 
-
-
         });
+
+        // Set the alignment of the confirm button and add it
         GridPane.setHalignment(confirmButton, HPos.CENTER);
         loginGrid.add(confirmButton, 1, 3);
 
+        // Set the scene, title and show
         popup.setScene(new Scene(loginGrid));
-        popup.setTitle("Sup");
+        popup.setTitle("Enter your information");
         popup.show();
-
 
     }
 
-    private void connect(Stage popup, String name, String info) {
+    private void connect(Stage popup, boolean hostOption, String name, String info) {
+
+        // Create a new box and set it to be the scene
         VBox box = new VBox();
+
+        // Align to center and add padding/spacing around edges
+        box.setAlignment(Pos.CENTER);
+        box.setPadding(new Insets(15, 15, 15, 15));
+        box.setSpacing(15);
+
+        // Add label
+        Label waitingLabel = new Label("Waiting for client to connect...");
+        box.getChildren().add(waitingLabel);
+
+        // Add indicator
+        ProgressBar pb = new ProgressBar();
+        pb.setPrefSize(150, 20);
+        box.getChildren().add(pb);
+
+        popup.setTitle("");
         popup.getScene().setRoot(box);
+        popup.sizeToScene();
 
-        updateLabel = new Label("Please Wait.");
-        box.getChildren().add(updateLabel);
+        if (hostOption == SERVER) {
+            Connect4Server server = new Connect4Server(name, Integer.parseInt(info));
+        }
 
+        AnimationTimer waitLoop = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+
+
+            }
+        };
+
+        /*
         Connect4Server server = new Connect4Server(this, name, Integer.parseInt(info));
         connectionThread = new Thread(server);
         connectionThread.start();
+
+         */
     }
 
     public void display(String str)
@@ -186,40 +221,12 @@ public class DriverGUI extends Application
     }
 
     private static String checkValid(String name, String info, boolean hostOption) {
-        String isValid = "valid";
 
-        if (name.isEmpty())
-            isValid = "Please Enter a name.";
-        else if (info.isEmpty())
-            isValid = "Please enter connection information.";
+        // TODO: This should check name and info for validity based on host option and return "valid" if valid, else error
 
-
-        return isValid;
+        return "valid";
     }
 
-    // Credit to stack overview for this method
-    // https://stackoverflow.com/questions/237159/whats-the-best-way-to-check-if-a-string-represents-an-integer-in-java
-    public static boolean isInteger(String str) {
-        if (str == null) {
-            return false;
-        }
-        int length = str.length();
-        if (length == 0) {
-            return false;
-        }
-        int i = 0;
-        if (str.charAt(0) == '-') {
-            if (length == 1) {
-                return false;
-            }
-            i = 1;
-        }
-        for (; i < length; i++) {
-            char c = str.charAt(i);
-            if (c < '0' || c > '9') {
-                return false;
-            }
-        }
-        return true;
-    }
+
+
 }

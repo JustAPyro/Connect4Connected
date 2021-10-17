@@ -138,7 +138,11 @@ public class Connect4Server implements Runnable
         catch (IOException e) {
             out("Client found but connection can't be established.");
         }
+
+        parent.closeThread();
+
     }
+
 }
 
 
