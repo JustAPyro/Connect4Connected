@@ -18,19 +18,34 @@ import javafx.scene.paint.Stop;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.util.Objects;
 
 
 public class DriverGUI extends Application
 {
 
+    Stage primaryStage;
+    Stage popup;
+
     Label updateLabel;
     SubThread connection;
+    AnimationTimer waitLoop;
+
+    ObjectOutputStream objectOut;
+    ObjectInputStream objectIn;
+
     final static boolean SERVER = true;
     final static boolean CLIENT = false;
 
     @Override
     public void start(Stage primaryStage) {
+
+        // Save the stage for use later
+        this.primaryStage = primaryStage;
 
         // Create a box to hold all the menu icons
         VBox menuBox = new VBox();
@@ -200,28 +215,38 @@ public class DriverGUI extends Application
             System.out.println("Client not configured");
         }
 
-        AnimationTimer waitLoop = new AnimationTimer() {
+        waitLoop = new AnimationTimer() {
             @Override
             public void handle(long now) {
-                System.out.println(connection.isConnected());
+                if (connection.isConnected()) {
+                    popup.close();
+                    waitLoop.stop();
+                    try {
+                        System.out.println(connection.getConnection());
+                        openGame(connection.getConnection(), name);
+                    } catch (IOException | ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         };
         waitLoop.start();
 
-        /*
-        Connect4Server server = new Connect4Server(this, name, Integer.parseInt(info));
-        connectionThread = new Thread(server);
-        connectionThread.start();
-
-         */
     }
 
-    public void display(String str)
-    {
-        String newText = updateLabel.getText() + "\n" + str;
-        updateLabel.setText(newText);
-    }
+    public void openGame(Socket connection, String name) throws IOException, ClassNotFoundException {
 
+        objectIn = new ObjectInputStream(connection.getInputStream());
+        objectOut = new ObjectOutputStream(connection.getOutputStream());
+
+
+        String opponentName = objectIn.readObject().toString();
+        System.out.println(opponentName);
+        Connect4 game = new Connect4(name, opponentName);
+
+        VBox root = new VBox();
+        primaryStage.getScene().setRoot(root);
+    }
 
     private static String checkValid(String name, String info, boolean hostOption) {
 
