@@ -17,8 +17,6 @@ public class Connect4 implements Serializable
     // Create strings to save the players name in this game
     private String playerOne, playerTwo;
 
-
-
     // Size for circles
     double circleSize = 50;
 
@@ -37,8 +35,6 @@ public class Connect4 implements Serializable
         // Set the players names
         this.playerOne = p1;
         this.playerTwo = p2;
-
-
 
         // Initializing the board
         board = new int[boardx][boardy];
