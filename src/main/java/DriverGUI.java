@@ -17,7 +17,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -29,24 +33,24 @@ import java.util.Objects;
 public class DriverGUI extends Application
 {
 
-    Connect4 game;
+    private static Logger logger = LogManager.getLogger(DriverGUI.class);
 
     Stage primaryStage;
+    Stage popup;
 
+    Label updateLabel;
     SubThread connection;
     AnimationTimer waitLoop;
 
-    ObjectStreamListener listener;
     ObjectOutputStream objectOut;
     ObjectInputStream objectIn;
 
     final static boolean SERVER = true;
     final static boolean CLIENT = false;
 
-    int colPointer;
-
     @Override
     public void start(Stage primaryStage) {
+        logger.error("HEY!");
 
         // Save the stage for use later
         this.primaryStage = primaryStage;
@@ -197,14 +201,8 @@ public class DriverGUI extends Application
         box.setSpacing(15);
 
         // Add label
-        Label waitingLabel = new Label();
+        Label waitingLabel = new Label("Waiting for client to connect...");
         box.getChildren().add(waitingLabel);
-
-        // Adjust label based on hostOption
-        if (hostOption == SERVER)
-            waitingLabel.setText("Waiting for client to connect...");
-        if (hostOption == CLIENT)
-            waitingLabel.setText("Looking for server...");
 
         // Add indicator
         ProgressBar pb = new ProgressBar();
@@ -222,11 +220,8 @@ public class DriverGUI extends Application
         }
 
         if (hostOption == CLIENT) {
-            connection = new Connect4Client(info);
-            Thread connectionThread = new Thread(connection);
-            connectionThread.start();
+            System.out.println("Client not configured");
         }
-        System.out.println("Starting waitloop");
 
         waitLoop = new AnimationTimer() {
             @Override
@@ -236,7 +231,7 @@ public class DriverGUI extends Application
                     waitLoop.stop();
                     try {
                         System.out.println(connection.getConnection());
-                        openGame(connection.getConnection(), hostOption, name);
+                        openGame(connection.getConnection(), name);
                     } catch (IOException | ClassNotFoundException e) {
                         e.printStackTrace();
                     }
@@ -247,146 +242,29 @@ public class DriverGUI extends Application
 
     }
 
+    public void openGame(Socket connection, String name) throws IOException, ClassNotFoundException {
+
+        objectIn = new ObjectInputStream(connection.getInputStream());
+        objectOut = new ObjectOutputStream(connection.getOutputStream());
 
 
-    public void openGame(Socket connection, boolean hostOption, String name) throws IOException, ClassNotFoundException {
+        // Read in the opponents screen name and write back ours to complete init
+        String opponentName = objectIn.readObject().toString();
+        objectOut.writeObject(name);
 
-        String opponentName = "";
-        // If we're a client
-        if (hostOption == CLIENT) {
-            // If we're a client we need to send the first message, so create the out, write our name, and flush
-            objectOut = new ObjectOutputStream(connection.getOutputStream());
-            objectOut.writeObject(name);
-            objectOut.flush();
+        System.out.println(opponentName);
+        Connect4 game = new Connect4(name, opponentName);
 
-            // only THEN create the object in and read back (idk why it works this way, but any other way breaks)
-            objectIn = new ObjectInputStream(connection.getInputStream());
-            opponentName = objectIn.readObject().toString();
-
-            // Since we're a client we can't control game state, so we need to also read back the game object
-            game = (Connect4) objectIn.readObject();
-
-            listener = new ObjectStreamListener(objectIn, true);
-
-        }
-        // If we're a server
-        if (hostOption == SERVER) {
-
-            // If we're a server we can initialize our streams at the same time
-            objectIn = new ObjectInputStream(connection.getInputStream());
-            objectOut = new ObjectOutputStream(connection.getOutputStream());
-
-            // Let's read in the other guys name, then send ours back
-            opponentName = objectIn.readObject().toString();
-            objectOut.writeObject(name);
-            objectOut.flush();
-
-            // Since we're a server we also need to send back the starting game object
-            game = new Connect4(name, opponentName);
-            objectOut.writeObject(game);
-            objectOut.reset();
-            objectOut.flush();
-
-            listener = new ObjectStreamListener(objectIn, false);
-        }
-
-
-        // Create a special listener object to watch for incoming data while we handle the GUI here
-        Thread listenThread = new Thread(listener);
-        listenThread.start(); // Start that on a different thread so our GUI doesn't get blocked and crash
-
-        // Set up the UI
         VBox root = new VBox();
         primaryStage.getScene().setRoot(root);
 
         Canvas canvas = new Canvas(650, 650);
-        double hSpace = canvas.getWidth()/(game.getBoardX()+1);
-
-        // Handle calculating which column the mouse is mousing over
-        canvas.setOnMouseMoved(e -> {
-            double x = e.getX();
-           for (int i = 0; i < game.getBoardX(); i++) {
-               if (i*hSpace < x && x < (i+1)*hSpace) {
-                   colPointer = i;
-               }
-           }
-        });
-
-        // On click, check if it's our turns (depending on if we're client or server, if so play the move
-        canvas.setOnMouseClicked(e -> {
-
-            if (!game.p1Turn && hostOption == SERVER) {
-                try {
-                    game.insert(colPointer); // Make the play
-                    objectOut.writeObject(game); // Send updated game state
-                    objectOut.reset();
-                    objectOut.flush(); // Flush the object stream afterwards
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
-            }
-
-
-           if (game.p1Turn && hostOption == CLIENT) {
-               try {
-                   System.out.println(game);
-                   System.out.println(game.p1Turn);
-                   objectOut.writeInt(colPointer);
-                   objectOut.flush();
-               } catch (IOException ex) {
-                   ex.printStackTrace();
-               }
-
-           }
-        });
         root.getChildren().add(new Label(name + " versus " + opponentName));
         root.getChildren().add(canvas);
-        primaryStage.sizeToScene();
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
+        gc.strokeRect(0, 0, canvas.getWidth(), canvas.getHeight());
         game.draw(gc);
-
-        AnimationTimer gameLoop = new AnimationTimer() {
-            @Override
-            public void handle(long now) {
-
-                game.draw(gc);
-                gc.fillRect((hSpace*(colPointer+1))-5, 10, 10, 20);
-
-                if (listener.ready()) {
-                    try {
-                        // If we're the server and we get information
-                        if (hostOption == SERVER) {
-
-                            // Get the play from the listener
-                            int play = listener.get();
-
-                            // Insert it into the game
-                            game.insert(play);
-
-                            // Write back the results to the client
-                            objectOut.writeObject(game);
-                            objectOut.reset();
-                            objectOut.flush();
-                        }
-                        // If we're the client and we get information
-                        if (hostOption == CLIENT) {
-                            game = (Connect4) listener.getObj();
-                        }
-
-
-
-
-                    } catch (Exception e) {
-
-                    }
-
-                }
-
-            }
-        }; gameLoop.start();
-
-
 
     }
 

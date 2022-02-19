@@ -14,7 +14,10 @@ public class Connect4Server extends SubThread  {
 
     public Connect4Server(int port) {
 
+
         this.port = port;
+
+
 
     }
     public Connect4Server(String name) throws IOException, ClassNotFoundException
