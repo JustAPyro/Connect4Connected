@@ -53,8 +53,13 @@ public class DriverGUI extends Application
     AnimationTimer waitLoop;
 
     // Object in/out streams for network communication
+    ObjectStreamListener listener;
     ObjectOutputStream objectOut;
     ObjectInputStream objectIn;
+
+    Connect4 game;
+
+    int colPointer;
 
     /**
      * Provides the entry point to the program,
@@ -117,7 +122,7 @@ public class DriverGUI extends Application
         primaryStage.show();
 
         // Notify the logger we've finished creating the launcher GUI
-        logger.info("Created Launcher GUI");
+        logger.info("Created Launcher GUI.");
 
     }
 
@@ -129,6 +134,11 @@ public class DriverGUI extends Application
      * @param hostOption DriverGUI.SERVER or DriverGUI.CLIENT represents if this will be a client or server
      */
     private void gameLauncher(boolean hostOption) {
+
+        // Log that the game launcher has been called and which parameter was provided
+        logger.info("Calling game launcher with \""
+                + ((hostOption) ? "server" : "client")
+                + "\" parameter.");
 
         // Create a new popup window
         Stage popup = new Stage();
@@ -165,6 +175,7 @@ public class DriverGUI extends Application
         TextField infoField = new TextField();
         loginGrid.add(infoField, 1, 1);
 
+        // And associated label
         Label checkLabel = new Label("Press Confirm when Done");
         GridPane.setHalignment(checkLabel, HPos.CENTER);
         loginGrid.add(checkLabel, 0, 2, 2, 1);
@@ -190,8 +201,8 @@ public class DriverGUI extends Application
             if (Objects.equals(isValid, "valid"))
                 connect(popup, hostOption, name, info);
             else {
-                // Otherwise, set the label to display the reson it failed and set color to red
-                checkLabel.setText(isValid); // Otherwise set the label to the reason it's not valid
+                // Otherwise, set the label to display the reason it failed and set color to red
+                checkLabel.setText(isValid); // Other-wise set the label to the reason it's not valid
                 checkLabel.setTextFill(Color.RED);
             }
 
@@ -206,9 +217,27 @@ public class DriverGUI extends Application
         popup.setTitle("Enter your information");
         popup.show();
 
+        // Log that the dialog was created
+        logger.info("Created input dialog popup.");
+
     }
 
+    /**
+     * This method records the screen name entered and then uses the popup stage provided
+     * to show a loading bar while we either host or attempt connection.
+     *
+     * @param popup The dialog popup.
+     * @param hostOption true for server connection or false for client connection.
+     * @param name The screen name.
+     * @param info if client this is an ip and port, otherwise just port to host on
+     */
     private void connect(Stage popup, boolean hostOption, String name, String info) {
+
+        // Log information about attempted connection
+        logger.info("Attempting to create "
+                + ((hostOption) ? "server" : "client")
+                + " connection at "
+                + info);
 
         // Create a new box and set it to be the scene
         VBox box = new VBox();
@@ -227,31 +256,53 @@ public class DriverGUI extends Application
         pb.setPrefSize(150, 20);
         box.getChildren().add(pb);
 
+        // Set the title of the popup, and configure size
         popup.setTitle("");
         popup.getScene().setRoot(box);
         popup.sizeToScene();
 
+        // If we are hosting a server
         if (hostOption == SERVER) {
+
+            // Log that we're following server path
+            logger.info("Executing server logic.");
+
             connection = new Connect4Server(Integer.parseInt(info));
             Thread connectionThread = new Thread(connection);
             connectionThread.start();
         }
 
+        // If we are a client looking for connection
         if (hostOption == CLIENT) {
-            System.out.println("Client not configured");
+
+            // Log that we're following client path
+            logger.info("Executing client logic.");
+
+            connection = new Connect4Client(info);
+            Thread connectionThread = new Thread(connection);
+            connectionThread.start();
         }
 
+        logger.info("Searching for connections.");
         waitLoop = new AnimationTimer() {
             @Override
             public void handle(long now) {
+
                 if (connection.isConnected()) {
+
                     popup.close();
                     waitLoop.stop();
                     try {
-                        System.out.println(connection.getConnection());
-                        openGame(connection.getConnection(), name);
-                    } catch (IOException | ClassNotFoundException e) {
-                        e.printStackTrace();
+
+                        // Open game using that connection and the screen name we picked
+                        openGame(connection.getConnection(), hostOption, name);
+
+                    }
+                    catch (IOException | ClassNotFoundException e) {
+
+                        // Log the error
+                        logger.error(e.getMessage());
+
                     }
                 }
             }
@@ -260,34 +311,158 @@ public class DriverGUI extends Application
 
     }
 
-    public void openGame(Socket connection, String name) throws IOException, ClassNotFoundException {
+    /**
+     * Establishes the beginning of a game, provided a connection and your name
+     *
+     * @param connection The connection to server/client of the other player
+     * @param name Your screen name
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    public void openGame(Socket connection, boolean hostOption, String name) throws IOException, ClassNotFoundException {
 
-        objectIn = new ObjectInputStream(connection.getInputStream());
-        objectOut = new ObjectOutputStream(connection.getOutputStream());
+        String opponentName = "";
+        // If we're a client
+        if (hostOption == CLIENT) {
+            // If we're a client we need to send the first message, so create the out, write our name, and flush
+            objectOut = new ObjectOutputStream(connection.getOutputStream());
+            objectOut.writeObject(name);
+            objectOut.flush();
+
+            // only THEN create the object in and read back (idk why it works this way, but any other way breaks)
+            objectIn = new ObjectInputStream(connection.getInputStream());
+            opponentName = objectIn.readObject().toString();
+
+            // Since we're a client we can't control game state, so we need to also read back the game object
+            game = (Connect4) objectIn.readObject();
+
+            listener = new ObjectStreamListener(objectIn, true);
+
+        }
+        // If we're a server
+        if (hostOption == SERVER) {
+
+            // If we're a server we can initialize our streams at the same time
+            objectIn = new ObjectInputStream(connection.getInputStream());
+            objectOut = new ObjectOutputStream(connection.getOutputStream());
+
+            // Let's read in the other guys name, then send ours back
+            opponentName = objectIn.readObject().toString();
+            objectOut.writeObject(name);
+            objectOut.flush();
+
+            // Since we're a server we also need to send back the starting game object
+            game = new Connect4(name, opponentName);
+            objectOut.writeObject(game);
+            objectOut.reset();
+            objectOut.flush();
+
+            listener = new ObjectStreamListener(objectIn, false);
+        }
 
 
-        // Read in the opponents screen name and write back ours to complete init
-        String opponentName = objectIn.readObject().toString();
-        objectOut.writeObject(name);
+        // Create a special listener object to watch for incoming data while we handle the GUI here
+        Thread listenThread = new Thread(listener);
+        listenThread.start(); // Start that on a different thread so our GUI doesn't get blocked and crash
 
-        System.out.println(opponentName);
-        Connect4 game = new Connect4(name, opponentName);
-
+        // Set up the UI
         VBox root = new VBox();
         primaryStage.getScene().setRoot(root);
 
         Canvas canvas = new Canvas(650, 650);
+        double hSpace = canvas.getWidth()/(game.getBoardX()+1);
+
+        // Handle calculating which column the mouse is mousing over
+        canvas.setOnMouseMoved(e -> {
+            double x = e.getX();
+            for (int i = 0; i < game.getBoardX(); i++) {
+                if (i*hSpace < x && x < (i+1)*hSpace) {
+                    colPointer = i;
+                }
+            }
+        });
+
+        // On click, check if it's our turns (depending on if we're client or server, if so play the move
+        canvas.setOnMouseClicked(e -> {
+
+            if (!game.p1Turn && hostOption == SERVER) {
+                try {
+                    game.insert(colPointer); // Make the play
+                    objectOut.writeObject(game); // Send updated game state
+                    objectOut.reset();
+                    objectOut.flush(); // Flush the object stream afterwards
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+
+
+            if (game.p1Turn && hostOption == CLIENT) {
+                try {
+                    System.out.println(game);
+                    System.out.println(game.p1Turn);
+                    objectOut.writeInt(colPointer);
+                    objectOut.flush();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+
+            }
+        });
         root.getChildren().add(new Label(name + " versus " + opponentName));
         root.getChildren().add(canvas);
+        primaryStage.sizeToScene();
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
-        gc.strokeRect(0, 0, canvas.getWidth(), canvas.getHeight());
         game.draw(gc);
+
+        AnimationTimer gameLoop = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+
+                game.draw(gc);
+                gc.fillRect((hSpace*(colPointer+1))-5, 10, 10, 20);
+
+                if (listener.ready()) {
+                    try {
+                        // If we're the server and we get information
+                        if (hostOption == SERVER) {
+
+                            // Get the play from the listener
+                            int play = listener.get();
+
+                            // Insert it into the game
+                            game.insert(play);
+
+                            // Write back the results to the client
+                            objectOut.writeObject(game);
+                            objectOut.reset();
+                            objectOut.flush();
+                        }
+                        // If we're the client and we get information
+                        if (hostOption == CLIENT) {
+                            game = (Connect4) listener.getObj();
+                        }
+
+
+
+
+                    } catch (Exception e) {
+
+                    }
+
+                }
+
+            }
+        }; gameLoop.start();
+
+
 
     }
 
     private static String checkValid(String name, String info, boolean hostOption) {
 
+        logger.info("Called \"checkValid\" to validate input.");
         // TODO: This should check name and info for validity based on host option and return "valid" if valid, else error
 
         return "valid";

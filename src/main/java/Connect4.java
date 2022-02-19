@@ -4,23 +4,20 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+
+import java.io.Serializable;
 
 
-public class Connect4
+public class Connect4 implements Serializable
 {
 
-    private static Logger logger = LogManager.getLogger("Connect4.class");
-
     // Width and height of the board (Standard is 6x7)
-    private final int boardX = 7; private final int boardY = 6;
+    private final int boardx = 7; private final int boardy = 6;
 
     // Create strings to save the players name in this game
-    private final String playerOne, playerTwo;
+    private String playerOne, playerTwo;
 
-    // Colors for each player
-    private Color colorOne, colorTwo, colorNone;
+
 
     // Size for circles
     double circleSize = 50;
@@ -34,8 +31,6 @@ public class Connect4
     // Constructor Class
     public Connect4(String p1, String p2) {
 
-        logger.error("HEY!");
-
         // Set it to player one's turn
         p1Turn = true;
 
@@ -43,12 +38,10 @@ public class Connect4
         this.playerOne = p1;
         this.playerTwo = p2;
 
-        colorOne = Color.YELLOW;
-        colorTwo = Color.RED;
-        colorNone = Color.LIGHTGRAY;
+
 
         // Initializing the board
-        board = new int[boardX][boardY];
+        board = new int[boardx][boardy];
 
     }
 
@@ -61,13 +54,13 @@ public class Connect4
     public void insert(int location) {
 
         // First, check if the given location is out of bounds
-        if (location < 0 || location > boardX)
+        if (location < 0 || location > boardx)
 
             // Throw an IndexOutOfBoundsException
             throw new IndexOutOfBoundsException("Tried to insert piece at invalid point!");
 
         // Create a variable to track the correct insertion height
-        int insertHeight = boardY - 1;
+        int insertHeight = boardy - 1;
 
         // Starting from the bottom of the board, as long as there's a piece at insertHeight
         while (board[location][insertHeight] != 0) {
@@ -114,13 +107,13 @@ public class Connect4
 
 
         // For each row
-        for (int y = 0; y < boardY; y++) {
+        for (int y = 0; y < boardy; y++) {
 
             // Create an element to store the line
             StringBuilder line = new StringBuilder();
 
             // For each column item of each row
-            for (int x = 0; x < boardX; x++) {
+            for (int x = 0; x < boardx; x++) {
 
                 // Add the correct value and a space to the line
                 line.append(board[x][y]).append(" ");
@@ -139,14 +132,25 @@ public class Connect4
         return boardString.toString();
     }
 
+    public int getBoardX() {
+        return boardx;
+    }
+
     public void draw(GraphicsContext gc) {
+
+        // Colors for each player
+        Color colorOne, colorTwo, colorNone;
+
+        colorOne = Color.YELLOW;
+        colorTwo = Color.RED;
+        colorNone = Color.LIGHTGRAY;
 
         Canvas c = gc.getCanvas();
         double width = c.getWidth();
         double height = c.getHeight();
 
-        double horizontalSpacing = width/(boardX +1);
-        double verticalSpacing = height/(boardY +1);
+        double horizontalSpacing = width/(boardx+1);
+        double verticalSpacing = height/(boardy+1);
 
         double                offset1 = .1;
         double                offset2 = .9;
@@ -156,9 +160,14 @@ public class Connect4
         gc.setFill(new LinearGradient(0, 0, .2, 1.4, true, CycleMethod.NO_CYCLE, stops1));
         gc.fillRect(0, 0, width, height);
 
-        for (int y = 1; y <= boardY; y++) {
-            for (int x = 1; x <= boardX; x++) {
-                drawCirc(gc, colorNone, x * horizontalSpacing, y * verticalSpacing);
+        for (int y = 1; y <= boardy; y++) {
+            for (int x = 1; x <= boardx; x++) {
+                if (board[x-1][y-1] == 0)
+                    drawCirc(gc, colorNone, x * horizontalSpacing, y * verticalSpacing);
+                if (board[x-1][y-1] == 1)
+                    drawCirc(gc, colorOne, x * horizontalSpacing, y * verticalSpacing);
+                if (board[x-1][y-1] == 2)
+                    drawCirc(gc, colorTwo, x * horizontalSpacing, y * verticalSpacing);
             }
         }
 

@@ -106,7 +106,6 @@ public class Connect4Server extends SubThread  {
         try {
             listener = new ServerSocket(port);
             connectionSocket = listener.accept();
-            System.out.println("Setting connected");
             setConnected(true);
             setConnection(connectionSocket);
         } catch (IOException e) {
