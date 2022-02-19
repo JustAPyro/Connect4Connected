@@ -1,3 +1,4 @@
+// necessary imports
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.geometry.HPos;
@@ -17,40 +18,51 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
-import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
-
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Objects;
 
-
+/**
+ * Driver GUI is in charge of launching the initial application. It provides a small GUI that
+ * will allow the player to select either "Host" (Server) or "Join" (Client), collects input
+ * (Name and ip:port) before forwarding the information to either Connect4Server.java or
+ * Connect4Client.java as required.
+ */
 public class DriverGUI extends Application
 {
 
-    private static Logger logger = LogManager.getLogger(DriverGUI.class);
+    // Logger used for debugging and collecting error information
+    private static final Logger logger = LogManager.getLogger(DriverGUI.class);
 
-    Stage primaryStage;
-    Stage popup;
+    // Some variables declared for the sake of readability
+    private final static boolean SERVER = true;
+    private final static boolean CLIENT = false;
 
-    Label updateLabel;
+    // Main window (stage)
+    private Stage primaryStage;
+
+    // Server connection object
     SubThread connection;
+
+    // This is the loop timer that handles wait time
     AnimationTimer waitLoop;
 
+    // Object in/out streams for network communication
     ObjectOutputStream objectOut;
     ObjectInputStream objectIn;
 
-    final static boolean SERVER = true;
-    final static boolean CLIENT = false;
-
+    /**
+     * Provides the entry point to the program,
+     * overridden from the Application class
+     * @param primaryStage The main window provided
+     */
     @Override
     public void start(Stage primaryStage) {
-        logger.error("HEY!");
 
         // Save the stage for use later
         this.primaryStage = primaryStage;
@@ -61,38 +73,41 @@ public class DriverGUI extends Application
         // Create a new scene with that vbox
         Scene menuScene = new Scene(menuBox, 600, 600, Color.GREEN);
 
+        // Set the back-fill for the menu
         menuScene.setFill(new LinearGradient(
-                0, 0, 1, 1, true,                      //sizing
-                CycleMethod.NO_CYCLE,                  //cycling
-                new Stop(0, Color.LIGHTBLUE),     //colors
+                0, 0, 1, 1, true, //sizing
+                CycleMethod.NO_CYCLE,                              //cycling
+                new Stop(0, Color.LIGHTBLUE),                //colors
                 new Stop(1, Color.CORNFLOWERBLUE))
         );
 
-        // Set menubox to transparent background
+        // Set menu box to transparent background
         menuBox.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)));
 
-        // Set spacing in the menubox
+        // Set spacing in the menu-box
         menuBox.setSpacing(30);
 
-        // Set for items to align in the cneter
+        // Set for items to align in the center
         menuBox.setAlignment(Pos.CENTER);
 
-        // Load the header image
-        Image image = new Image("Images/Connect4.png");
+        // Load the header image / logo
+        Image image = new Image("images/Connect4.png");
         ImageView logoView = new ImageView(image);
         menuBox.getChildren().add(logoView);
 
         // Host game button
         Button hostButton = new Button("Host Game");
-        hostButton.setOnAction(e -> gameLauncher(SERVER) );
         hostButton.setPrefSize(400, 100);
         menuBox.getChildren().add(hostButton);
 
         // Join game button
         Button joinButton = new Button("Join Game");
-        joinButton.setOnAction(e -> gameLauncher(CLIENT));
         joinButton.setPrefSize(400, 100);
         menuBox.getChildren().add(joinButton);
+
+        // Set the buttons to call the gameLauncher with appropriate client/server parameter
+        joinButton.setOnAction(e -> gameLauncher(CLIENT));  // Pass client to game launcher
+        hostButton.setOnAction(e -> gameLauncher(SERVER) ); // Pass server to game launcher
 
         // Set stage to scene
         primaryStage.setScene(menuScene);
@@ -100,6 +115,9 @@ public class DriverGUI extends Application
         // Set title and display
         primaryStage.setTitle("Connect4Connected");
         primaryStage.show();
+
+        // Notify the logger we've finished creating the launcher GUI
+        logger.info("Created Launcher GUI");
 
     }
 
