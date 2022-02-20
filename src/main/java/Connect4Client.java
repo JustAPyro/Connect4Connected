@@ -12,8 +12,9 @@ public class Connect4Client extends SubThread
 {
 
 
-    int port = 9876;
-    String ip = "localhost";
+    private int port;
+    private String ip;
+
     Socket socket;
     ObjectOutputStream streamToServer;
     ObjectInputStream streamFromServer;
