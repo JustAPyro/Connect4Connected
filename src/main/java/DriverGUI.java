@@ -475,8 +475,6 @@ public class DriverGUI extends Application
                         if (hostOption == CLIENT) {
                             game = (Connect4) listener.getObj();
                         }
-
-
                     }
                     catch (Exception e) {
 
@@ -484,9 +482,7 @@ public class DriverGUI extends Application
                         logger.error(e.getMessage());
 
                     }
-
                 }
-
             }
         };
 
