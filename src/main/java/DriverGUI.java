@@ -401,46 +401,62 @@ public class DriverGUI extends Application
         // On click, check if it's our turns (depending on if we're client or server, if so play the move
         canvas.setOnMouseClicked(e -> {
 
+            // If it's our turn and we're the server
             if (!game.p1Turn && hostOption == SERVER) {
                 try {
                     game.insert(colPointer); // Make the play
                     objectOut.writeObject(game); // Send updated game state
-                    objectOut.reset();
-                    objectOut.flush(); // Flush the object stream afterwards
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
+                    objectOut.reset();  // Reset the object stream
+                    objectOut.flush();  // then flush it
+                }
+                catch (IOException ioException) {
+
+                    // Log the error
+                    logger.error(ioException.toString());
                 }
             }
 
-
+            // If it's our turn and we're the client
             if (game.p1Turn && hostOption == CLIENT) {
                 try {
-                    System.out.println(game);
-                    System.out.println(game.p1Turn);
-                    objectOut.writeInt(colPointer);
-                    objectOut.flush();
-                } catch (IOException ex) {
-                    ex.printStackTrace();
+                    objectOut.writeInt(colPointer); // Send the column we placed it on
+                    objectOut.flush();              // Flush the object afterwards
+                }
+                catch (IOException ex)
+                {
+                    // Log the IOException if it occurs
+                    logger.error(ex.toString());
                 }
 
             }
         });
+
+        // Add a label with both names and the canvas to the stage
         root.getChildren().add(new Label(name + " versus " + opponentName));
         root.getChildren().add(canvas);
+
+        // Size the window to the scene
         primaryStage.sizeToScene();
 
+        // Get the graphics context and draw the current game-state
         GraphicsContext gc = canvas.getGraphicsContext2D();
         game.draw(gc);
 
+        // Start the animation loop
         AnimationTimer gameLoop = new AnimationTimer() {
             @Override
             public void handle(long now) {
 
+                // Redraw the game
                 game.draw(gc);
+
+                // Draw the background
                 gc.fillRect((hSpace*(colPointer+1))-5, 10, 10, 20);
 
+                // Wait for new information
                 if (listener.ready()) {
                     try {
+
                         // If we're the server and we get information
                         if (hostOption == SERVER) {
 
@@ -472,12 +488,20 @@ public class DriverGUI extends Application
                 }
 
             }
-        }; gameLoop.start();
+        };
 
-
+        // Start the game loop
+        gameLoop.start();
 
     }
 
+    /**
+     * Checks to see if provided information is valid to start a game.
+     * @param name The screen-name of the player
+     * @param info Information about target location for connection
+     * @param hostOption Server or Client
+     * @return "valid" if all information is good, otherwise an error message to display
+     */
     private static String checkValid(String name, String info, boolean hostOption) {
 
         logger.info("Called \"checkValid\" to validate input.");
@@ -493,10 +517,7 @@ public class DriverGUI extends Application
             }
         }
 
-
         return "valid";
     }
-
-
 
 }
