@@ -52,13 +52,13 @@ public class DriverGUI extends Application
     // This is the loop timer that handles wait time
     AnimationTimer waitLoop;
 
-    // Object in/out streams for network communication
+    // Object in/out streams for network communication, and listing thread to manage them
     ObjectStreamListener listener;
     ObjectOutputStream objectOut;
     ObjectInputStream objectIn;
 
+    // The actual gamestate and the column pointer
     Connect4 game;
-
     int colPointer;
 
     /**
@@ -316,26 +316,34 @@ public class DriverGUI extends Application
      *
      * @param connection The connection to server/client of the other player
      * @param name Your screen name
-     * @throws IOException
-     * @throws ClassNotFoundException
+     * @throws IOException if an error occurs during IO
+     * @throws ClassNotFoundException if the server/client sends an unknown object class
      */
     public void openGame(Socket connection, boolean hostOption, String name) throws IOException, ClassNotFoundException {
 
         String opponentName = "";
         // If we're a client
         if (hostOption == CLIENT) {
+
             // If we're a client we need to send the first message, so create the out, write our name, and flush
             objectOut = new ObjectOutputStream(connection.getOutputStream());
             objectOut.writeObject(name);
             objectOut.flush();
 
-            // only THEN create the object in and read back (idk why it works this way, but any other way breaks)
+            // Log that we've sent a request message
+            logger.info("Sent a message to server providing our name and requesting a game.");
+
+            // only THEN create the object in and read back (I don't know why it works this way, but any other way breaks)
             objectIn = new ObjectInputStream(connection.getInputStream());
             opponentName = objectIn.readObject().toString();
 
             // Since we're a client we can't control game state, so we need to also read back the game object
             game = (Connect4) objectIn.readObject();
 
+            // Log successful read of data
+            logger.info("Received back opponents name and initial gamestate.");
+
+            // Create a new listener to listen for further information from server
             listener = new ObjectStreamListener(objectIn, true);
 
         }
@@ -351,12 +359,19 @@ public class DriverGUI extends Application
             objectOut.writeObject(name);
             objectOut.flush();
 
+            // Log that we've received a request
+            logger.info("Read a name and request to play.");
+
             // Since we're a server we also need to send back the starting game object
             game = new Connect4(name, opponentName);
             objectOut.writeObject(game);
             objectOut.reset();
             objectOut.flush();
 
+            // Log that we've successfully returned our name and game-state
+            logger.info("Sent back our screen-name and initial game-state.");
+
+            // Create a new listener to collect future input from client
             listener = new ObjectStreamListener(objectIn, false);
         }
 
@@ -369,6 +384,7 @@ public class DriverGUI extends Application
         VBox root = new VBox();
         primaryStage.getScene().setRoot(root);
 
+        // Add a canvas to the UI
         Canvas canvas = new Canvas(650, 650);
         double hSpace = canvas.getWidth()/(game.getBoardX()+1);
 
@@ -445,9 +461,11 @@ public class DriverGUI extends Application
                         }
 
 
+                    }
+                    catch (Exception e) {
 
-
-                    } catch (Exception e) {
+                        // Log the exception
+                        logger.error(e.getMessage());
 
                     }
 
@@ -463,7 +481,18 @@ public class DriverGUI extends Application
     private static String checkValid(String name, String info, boolean hostOption) {
 
         logger.info("Called \"checkValid\" to validate input.");
-        // TODO: This should check name and info for validity based on host option and return "valid" if valid, else error
+
+        if (name.length() < 1) {
+            logger.info("Entered a invalid name: name length less than 1.");
+            return "Please enter a screen name.";
+        }
+        else if (hostOption == CLIENT) {
+            if (!info.contains(":")) {
+                logger.info("Entered invalid info: did not contain ':'");
+                return "Please enter server info in ip:port format";
+            }
+        }
+
 
         return "valid";
     }
