@@ -108,11 +108,11 @@ public class Connect4 implements Serializable
 
         // If it's player one's turn
         if (p1Turn) {
-            // Start the string with a notification of who's turn it is
+            // Start the string with a notification of whose turn it is
             boardString = new StringBuilder(playerOne + "'s Turn: " + newLine);
         }
         else {
-            // Start the string with a notification of who's turn it is using player two's name
+            // Start the string with a notification of whose turn it is using player two's name
             boardString = new StringBuilder(playerTwo + "'s Turn: " + newLine);
         }
 

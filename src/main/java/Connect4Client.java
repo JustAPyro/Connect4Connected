@@ -1,79 +1,57 @@
-
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.Scanner;
 
 
+/**
+ * Manages the clientside connection and loop of a Connect4 game.
+ */
 public class Connect4Client extends SubThread
 {
 
+    // The string representation of target server "ip:host"
+    private final String info;
 
-    private int port;
-    private String ip;
-
-    Socket socket;
-    ObjectOutputStream streamToServer;
-    ObjectInputStream streamFromServer;
-    Scanner sc;
-
-    String info;
-
+    /**
+     * Initializes a target connection using only the target server information
+     * @param info String representation of target server "ip:host"
+     */
     public Connect4Client(String info) {
         this.info = info;
     }
 
-    public Connect4Client(String name, boolean nix) throws IOException, ClassNotFoundException
-    {
-
-        Scanner sc = new Scanner(System.in);
-
-        System.out.println("Connecting to port: " + port + "...");
-        socket = new Socket(ip, port);
-        System.out.println("Connection Successful! Getting initialization data...");
-        streamToServer = new ObjectOutputStream(socket.getOutputStream());
-        streamToServer.writeObject(name);
-        streamToServer.flush();
-
-        streamFromServer = new ObjectInputStream(socket.getInputStream());
-        String init = streamFromServer.readObject().toString();
-        System.out.println("You are playing against: " + init);
-
-        boolean running = true;
-        while (running) {
-            System.out.println("It's your turn! Enter your play: ");
-            int play = sc.nextInt();
-            streamToServer.writeInt(play);
-            streamToServer.flush();
-            String gameState = streamFromServer.readObject().toString();
-            System.out.print(gameState);
-            System.out.println("Waiting for their move...");
-
-            gameState = streamFromServer.readObject().toString();
-            System.out.println(gameState);
-        }
-
-    }
-
-
+    /**
+     * Entry point for the new client thread. This is executed on a new thread
+     * shortly after the client is initialized.
+     */
     @Override
     public void run() {
+
         // Start by parsing (ie localhost:9876 -> ip:localhost, port:9867)
         String[] connectionInfo = info.split(":");
-        ip = connectionInfo[0];
-        port = Integer.parseInt(connectionInfo[1]);
 
+        // Target IP and port
+        String ip = connectionInfo[0];
+
+        // Port and IP the client will connect to
+        int port = Integer.parseInt(connectionInfo[1]);
+
+        // scanning loop (allows us to constantly check for new connections)
         boolean scanning = true;
         while (scanning) {
             try {
-                socket = new Socket(ip, port);
+
+                // Create a new socket
+                // Connection socket
+                Socket socket = new Socket(ip, port);
+
+                // Set the connection and indicate success
                 setConnected(true);
                 setConnection(socket);
+
+                // End the loop
                 scanning = false;
-            } catch(Exception e) {
+
+            }
+            catch(Exception e) {
                 try {
                     Thread.sleep(2000);
                 } catch(InterruptedException ie) {
