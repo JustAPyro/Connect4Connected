@@ -448,11 +448,12 @@ public class DriverGUI extends Application
             @Override
             public void handle(long now) {
 
-                // Redraw the game
+                // Draw the game
                 game.draw(gc);
 
-                // Draw the background
-                gc.fillRect((hSpace*(colPointer+1))-5, 10, 10, 20);
+                // If it's our turn, draw the pointer
+                if ((!game.p1Turn && hostOption == SERVER) || (game.p1Turn && hostOption == CLIENT))
+                    gc.fillRect((hSpace*(colPointer+1))-5, 10, 10, 20);
 
                 // Wait for new information
                 if (listener.ready()) {
