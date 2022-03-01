@@ -386,6 +386,7 @@ public class DriverGUI extends Application
 
         // Add a canvas to the UI
         Canvas canvas = new Canvas(650, 650);
+        primaryStage.sizeToScene();
         double hSpace = canvas.getWidth()/(game.getBoardX()+1);
 
         // Handle calculating which column the mouse is mousing over
@@ -432,7 +433,7 @@ public class DriverGUI extends Application
         });
 
         // Add a label with both names and the canvas to the stage
-        root.getChildren().add(new Label(name + " versus " + opponentName));
+        //root.getChildren().add(new Label(name + " versus " + opponentName));
         root.getChildren().add(canvas);
 
         // Size the window to the scene
