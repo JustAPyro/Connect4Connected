@@ -385,9 +385,8 @@ public class DriverGUI extends Application
         primaryStage.getScene().setRoot(root);
 
         // Add a canvas to the UI
-        Canvas canvas = new Canvas(650, 650);
-        primaryStage.sizeToScene();
-        double hSpace = canvas.getWidth()/(game.getBoardX()+1);
+        Canvas canvas = new Canvas(800, 650);
+        double hSpace = (double) 650/(game.getBoardX()+1);
 
         // Handle calculating which column the mouse is mousing over
         canvas.setOnMouseMoved(e -> {
@@ -437,7 +436,8 @@ public class DriverGUI extends Application
         root.getChildren().add(canvas);
 
         // Size the window to the scene
-        primaryStage.sizeToScene();
+        primaryStage.setMinWidth(800);
+        primaryStage.setMinHeight(650);
 
         // Get the graphics context and draw the current game-state
         GraphicsContext gc = canvas.getGraphicsContext2D();

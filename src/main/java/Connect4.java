@@ -162,7 +162,7 @@ public class Connect4 implements Serializable
 
         // Get the canvas and associated measurements
         Canvas c = gc.getCanvas();
-        double width = c.getWidth();
+        double width = 650;
         double height = c.getHeight();
 
         // Calculate spacing based on board dimensions and sizes.
@@ -176,7 +176,7 @@ public class Connect4 implements Serializable
         Color                 color2  = Color.rgb(0,200,255);
         Stop[]                stops1  = new Stop[] {new Stop(offset1, color1), new Stop(offset2, color2)};
         gc.setFill(new LinearGradient(0, 0, .2, 1.4, true, CycleMethod.NO_CYCLE, stops1));
-        gc.fillRect(0, 0, width, height);
+        gc.fillRect(0, 0, 800, height);
 
         // Iterate through and draw the circles of the board based on their values
         // TODO: Could replace these three if statements with one hashmap.
