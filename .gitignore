@@ -1,3 +1,9 @@
 # Project exclude paths
 /out/
 /target/
+
+# Codesonar config things
+Connect4Connected.conf
+Connect4Connected.cs-java-scan.java.32.conf
+Connect4Connected.prj
+Connect4Connected.prj_files/
